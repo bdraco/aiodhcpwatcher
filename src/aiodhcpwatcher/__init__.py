@@ -46,13 +46,6 @@ class AIODHCPWatcher:
 
     def start(self) -> None:
         """Start watching for dhcp packets."""
-        try:
-            self._start()
-        except Exception as ex:  # pylint: disable=broad-except
-            _LOGGER.exception("Error setting up DHCP watcher: %s", ex)
-
-    def _start(self) -> None:
-        """Start watching for dhcp packets."""
         # Local import because importing from scapy has side effects such as opening
         # sockets
         from scapy import arch  # pylint: disable=import-outside-toplevel # noqa: F401
