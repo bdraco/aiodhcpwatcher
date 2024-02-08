@@ -130,7 +130,14 @@ class AIODHCPWatcher:
 
         self._sock = sock
         _handle_dhcp_packet = make_packet_handler(self._callback)
-        self._loop.add_reader(fileno, partial(self._on_data, _handle_dhcp_packet, sock))
+        try:
+            self._loop.add_reader(
+                fileno, partial(self._on_data, _handle_dhcp_packet, sock)
+            )
+        except PermissionError as ex:
+            _LOGGER.error("Cannot watch for dhcp packets: %s", ex)
+            self._sock.close()
+            self._sock = None
 
     def _on_data(
         self, handle_dhcp_packet: Callable[["Packet"], None], sock: Any
