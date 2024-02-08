@@ -4,6 +4,7 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
+import pytest_asyncio
 from scapy import (
     arch,  # noqa: F401
     interfaces,
@@ -12,7 +13,7 @@ from scapy.error import Scapy_Exception
 from scapy.layers.l2 import Ether
 from scapy.packet import Packet
 
-from aiodhcpwatcher import DHCPRequest, start
+from aiodhcpwatcher import DHCPRequest, async_init, start
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -177,6 +178,11 @@ class MockSocket:
 
     def fileno(self) -> int:
         return self._fileno
+
+
+@pytest_asyncio.fixture(autouse=True, scope="session")
+async def _init_scapy():
+    await async_init()
 
 
 @pytest.mark.asyncio
