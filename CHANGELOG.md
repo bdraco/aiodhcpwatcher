@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.5.0 (2024-02-08)
+
+### Feature
+
+- Decode hostnames using idna encoding (#10) ([`111cdfe`](https://github.com/bdraco/aiodhcpwatcher/commit/111cdfefcfc621c7ef3d001d8b9f8e2b85460ef2))
+
 ## v0.4.0 (2024-02-08)
 
 ### Feature
