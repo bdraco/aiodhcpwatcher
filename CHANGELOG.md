@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.0 (2024-02-08)
+
+### Feature
+
+- Refactor to make more testable (#4) ([`ddd6d84`](https://github.com/bdraco/aiodhcpwatcher/commit/ddd6d84c8246b05384b92fa7edf45fca5bed6a92))
+
 ## v0.2.0 (2024-02-08)
 
 ### Feature
