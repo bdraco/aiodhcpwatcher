@@ -4,6 +4,7 @@ import asyncio
 import logging
 import os
 from dataclasses import dataclass
+from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, Iterable, cast
 
 from scapy.config import conf
@@ -34,7 +35,6 @@ class AIODHCPWatcher:
         """Initialize watcher."""
         self._loop = asyncio.get_running_loop()
         self._sock: Any | None = None
-        self._handle_dhcp_packet: Callable[[Packet], None] | None = None
         self._callback = callback
 
     def stop(self) -> None:
@@ -46,10 +46,10 @@ class AIODHCPWatcher:
 
     def start(self) -> None:
         """Start watching for dhcp packets."""
-        # try:
-        self._start()
-        # except Exception as ex:  # pylint: disable=broad-except
-        #    _LOGGER.exception("Error setting up DHCP watcher: %s", ex)
+        try:
+            self._start()
+        except Exception as ex:  # pylint: disable=broad-except
+            _LOGGER.exception("Error setting up DHCP watcher: %s", ex)
 
     def _start(self) -> None:
         """Start watching for dhcp packets."""
@@ -127,14 +127,12 @@ class AIODHCPWatcher:
             return
 
         self._sock = sock
-        self._handle_dhcp_packet = _handle_dhcp_packet
-        self._loop.add_reader(fileno, self._on_data)
+        self._loop.add_reader(fileno, partial(self._on_data, _handle_dhcp_packet, sock))
 
-    def _on_data(self) -> None:
+    def _on_data(
+        self, handle_dhcp_packet: Callable[["Packet"], None], sock: Any
+    ) -> None:
         """Handle data from the socket."""
-        if not (sock := self._sock):
-            return
-
         try:
             data = sock.recv()
         except (BlockingIOError, InterruptedError):
@@ -143,11 +141,8 @@ class AIODHCPWatcher:
             _LOGGER.exception("Fatal error while processing dhcp packet: %s", ex)
             self.stop()
 
-        if TYPE_CHECKING:
-            assert self._handle_dhcp_packet is not None
-
         if data:
-            self._handle_dhcp_packet(data)
+            handle_dhcp_packet(data)
 
     def _make_listen_socket(self, cap_filter: str) -> Any:
         """Get a nonblocking listen socket."""
