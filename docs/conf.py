@@ -7,7 +7,7 @@
 project = "aiodhcpwatcher"
 copyright = "2024, J. Nick Koston"
 author = "J. Nick Koston"
-release = "0.5.0"
+release = "0.6.0"
 
 # General configuration
 extensions = [

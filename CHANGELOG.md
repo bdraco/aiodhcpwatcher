@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.6.0 (2024-02-08)
+
+### Feature
+
+- Add test coverage for broken filtering (#12) ([`c23d934`](https://github.com/bdraco/aiodhcpwatcher/commit/c23d934e6f86c031bb25a309edaff607b255596d))
+
 ## v0.5.0 (2024-02-08)
 
 ### Feature
