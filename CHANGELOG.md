@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.2 (2024-02-08)
+
+### Fix
+
+- Ensure filter can be created on macos (#7) ([`8c00359`](https://github.com/bdraco/aiodhcpwatcher/commit/8c0035964b249eeedc684f19794a99d93a3317a0))
+
 ## v0.3.1 (2024-02-08)
 
 ### Fix
