@@ -90,6 +90,8 @@ class AIODHCPWatcher:
         """Start watching for dhcp packets."""
         # Local import because importing from scapy has side effects such as opening
         # sockets
+        # We must import l2 before testing the filter or it will fail
+
         #
         # Importing scapy.sendrecv will cause a scapy resync which will
         # import scapy.arch.read_routes which will import scapy.sendrecv
@@ -98,6 +100,9 @@ class AIODHCPWatcher:
         # the module is loaded and avoid the problem
         #
         from scapy import arch  # pylint: disable=import-outside-toplevel # noqa: F401
+        from scapy.layers import (
+            l2,  # pylint: disable=import-outside-toplevel # noqa: F401
+        )
 
         # disable scapy promiscuous mode as we do not need it
         conf.sniff_promisc = 0
