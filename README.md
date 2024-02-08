@@ -46,6 +46,22 @@ Install this via pip (or your favourite package manager):
 
 `pip install aiodhcpwatcher`
 
+## Usage
+
+```python
+import asyncio
+import aiodhcpwatcher
+
+def _async_process_dhcp_request(response: aiodhcpwatcher.DHCPRequest) -> None:
+    print(response)
+
+async def run():
+    cancel = aiodhcpwatcher.start(_async_process_dhcp_request)
+    await asyncio.Event().wait()
+
+asyncio.run(run())
+```
+
 ## Contributors ✨
 
 Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
