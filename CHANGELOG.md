@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.1 (2024-02-08)
+
+### Fix
+
+- Import order (#6) ([`3acbb20`](https://github.com/bdraco/aiodhcpwatcher/commit/3acbb202a4cbfee1fa41595ac5b746c485c1c04e))
+
 ## v0.3.0 (2024-02-08)
 
 ### Feature
