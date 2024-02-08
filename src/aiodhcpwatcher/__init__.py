@@ -46,10 +46,10 @@ class AIODHCPWatcher:
 
     def start(self) -> None:
         """Start watching for dhcp packets."""
-        try:
-            self._start()
-        except Exception as ex:  # pylint: disable=broad-except
-            _LOGGER.exception("Error setting up DHCP watcher: %s", ex)
+        # try:
+        self._start()
+        # except Exception as ex:  # pylint: disable=broad-except
+        #    _LOGGER.exception("Error setting up DHCP watcher: %s", ex)
 
     def _start(self) -> None:
         """Start watching for dhcp packets."""
@@ -68,7 +68,7 @@ class AIODHCPWatcher:
         # the module is loaded and avoid the problem
         #
 
-        def _handle_dhcp_packet(packet: Packet) -> None:
+        def _handle_dhcp_packet(packet: "Packet") -> None:
             """Process a dhcp packet."""
             if not (dhcp_packet := packet.getlayer(DHCP)):
                 return

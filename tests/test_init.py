@@ -1,6 +1,10 @@
+import logging
+
 import pytest
 
 from aiodhcpwatcher import DHCPRequest, start
+
+logging.basicConfig(level=logging.DEBUG)
 
 
 @pytest.mark.asyncio
