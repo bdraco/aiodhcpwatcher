@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.3 (2024-02-08)
+
+### Fix
+
+- Add checks for perm error setting up reader (#8) ([`58b4025`](https://github.com/bdraco/aiodhcpwatcher/commit/58b40253abcefb71deb17c7d87c706a3f47f15fe))
+
 ## v0.3.2 (2024-02-08)
 
 ### Fix
