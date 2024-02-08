@@ -135,7 +135,7 @@ class AIODHCPWatcher:
                 fileno, partial(self._on_data, _handle_dhcp_packet, sock)
             )
         except PermissionError as ex:
-            _LOGGER.error("Cannot watch for dhcp packets: %s", ex)
+            _LOGGER.error("Permission denied to watch for dhcp packets: %s", ex)
             self._sock.close()
             self._sock = None
 

@@ -4,6 +4,11 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
+from scapy import (
+    arch,  # noqa: F401
+    interfaces,
+)
+from scapy.error import Scapy_Exception
 from scapy.layers.l2 import Ether
 from scapy.packet import Packet
 
@@ -130,12 +135,7 @@ class MockSocket:
 @pytest.mark.asyncio
 async def test_start_stop():
     """Test start and stop."""
-
-    def _handle_dhcp_packet(data: DHCPRequest) -> None:
-        pass
-
-    stop = start(_handle_dhcp_packet)
-    stop()
+    start(lambda data: None)()
 
 
 @pytest.mark.asyncio
@@ -188,3 +188,49 @@ async def test_watcher():
             ip_address="192.168.107.151", hostname="", mac_address="60:6b:bd:59:e4:b4"
         ),
     ]
+
+
+@pytest.mark.asyncio
+async def test_setup_fails_as_root(caplog: pytest.LogCaptureFixture) -> None:
+    """Test that the setup fails as root."""
+    with patch("os.geteuid", return_value=0), patch(
+        "scapy.arch.common.compile_filter"
+    ), patch.object(
+        interfaces,
+        "resolve_iface",
+        side_effect=Scapy_Exception,
+    ):
+        start(lambda data: None)()
+    assert "Cannot watch for dhcp packets" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_setup_fails_as_non_root(caplog: pytest.LogCaptureFixture) -> None:
+    """Test that the setup fails as root."""
+    caplog.set_level(logging.DEBUG)
+    with patch("os.geteuid", return_value=10), patch(
+        "scapy.arch.common.compile_filter"
+    ), patch.object(
+        interfaces,
+        "resolve_iface",
+        side_effect=Scapy_Exception,
+    ):
+        start(lambda data: None)()
+    assert "Cannot watch for dhcp packets without root or CAP_NET_RAW" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_permission_denied_to_add_reader(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test permission denied to add reader."""
+    loop = asyncio.get_running_loop()
+    with patch.object(loop, "add_reader", side_effect=PermissionError), patch(
+        "scapy.arch.common.compile_filter"
+    ), patch.object(
+        interfaces,
+        "resolve_iface",
+    ):
+        start(lambda data: None)()
+
+    assert "Permission denied to watch for dhcp packets" in caplog.text
