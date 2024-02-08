@@ -45,7 +45,12 @@ def make_packet_handler(
 
         options: Iterable[tuple[str, int | bytes | None]] = dhcp_packet.options
 
-        options_dict = {option[0]: option[1] for option in options if len(option) >= 2}
+        options_dict: dict[str, int | bytes | None] = {}
+        for option in options:
+            if type(option) is tuple:
+                options_dict[option[0]] = option[1]
+            if option == "end":
+                break
 
         if options_dict.get("message-type") != DHCP_REQUEST:
             # Not a DHCP request
@@ -58,9 +63,11 @@ def make_packet_handler(
             hostname_bytes, bytes
         ):
             try:
-                hostname = hostname_bytes.decode()
-            except (AttributeError, UnicodeDecodeError):
-                pass
+                # The standard uses idna encoding for hostnames, but some clients
+                # do not follow the standard and use utf-8 instead.
+                hostname = hostname_bytes.decode("idna")
+            except UnicodeDecodeError:
+                hostname = hostname_bytes.decode("utf-8", errors="replace")
 
         mac_address: str = packet.getlayer(Ether).src
 
