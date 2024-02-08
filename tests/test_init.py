@@ -250,6 +250,21 @@ async def test_watcher():
 
 
 @pytest.mark.asyncio
+async def test_setup_fails_broken_filtering(caplog: pytest.LogCaptureFixture) -> None:
+    """Test that the setup fails when filtering is broken."""
+    caplog.set_level(logging.DEBUG)
+    with patch(
+        "scapy.arch.common.compile_filter",
+        side_effect=Scapy_Exception,
+    ):
+        start(lambda data: None)()
+    assert (
+        "Cannot watch for dhcp packets without a functional packet filter"
+        in caplog.text
+    )
+
+
+@pytest.mark.asyncio
 async def test_setup_fails_as_root(caplog: pytest.LogCaptureFixture) -> None:
     """Test that the setup fails as root."""
     with patch("os.geteuid", return_value=0), patch(
