@@ -23,7 +23,7 @@ packages = [
 "Changelog" = "https://github.com/bdraco/aiodhcpwatcher/blob/main/CHANGELOG.md"
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.10"
 scapy = ">=2.5.0"
 
 [tool.poetry.group.dev.dependencies]
