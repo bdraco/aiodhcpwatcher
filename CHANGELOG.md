@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.4.0 (2024-02-08)
+
+### Feature
+
+- Increase coverage (#9) ([`6280898`](https://github.com/bdraco/aiodhcpwatcher/commit/6280898a4a55cc3e0feed3e6b78c453038419c5e))
+
 ## v0.3.3 (2024-02-08)
 
 ### Fix
