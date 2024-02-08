@@ -5,7 +5,7 @@ import logging
 import os
 from dataclasses import dataclass
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, Iterable, cast
+from typing import TYPE_CHECKING, Any, Callable, Iterable
 
 from scapy.config import conf
 from scapy.error import Scapy_Exception
@@ -28,6 +28,57 @@ class DHCPRequest:
     mac_address: str
 
 
+def make_packet_handler(
+    callback: Callable[[DHCPRequest], None]
+) -> Callable[["Packet"], None]:
+    """Create a packet handler."""
+    # Local import because importing from scapy has side effects such as opening
+    # sockets
+    from scapy import arch  # pylint: disable=import-outside-toplevel # noqa: F401
+    from scapy.layers.dhcp import DHCP  # pylint: disable=import-outside-toplevel
+    from scapy.layers.inet import IP  # pylint: disable=import-outside-toplevel
+    from scapy.layers.l2 import Ether  # pylint: disable=import-outside-toplevel
+
+    #
+    # Importing scapy.sendrecv will cause a scapy resync which will
+    # import scapy.arch.read_routes which will import scapy.sendrecv
+    #
+    # We avoid this circular import by importing arch above to ensure
+    # the module is loaded and avoid the problem
+    #
+
+    def _handle_dhcp_packet(packet: "Packet") -> None:
+        """Process a dhcp packet."""
+        if not (dhcp_packet := packet.getlayer(DHCP)):
+            return
+
+        options: Iterable[tuple[str, int | bytes | None]] = dhcp_packet.options
+
+        options_dict = {option[0]: option[1] for option in options if len(option) >= 2}
+
+        if options_dict.get("message-type") != DHCP_REQUEST:
+            # Not a DHCP request
+            return
+
+        ip_address: str = options_dict.get("requested_addr") or packet.getlayer(IP).src  # type: ignore[assignment]
+
+        hostname = ""
+        if (hostname_bytes := options_dict.get("hostname")) and isinstance(
+            hostname_bytes, bytes
+        ):
+            try:
+                hostname = hostname_bytes.decode()
+            except (AttributeError, UnicodeDecodeError):
+                pass
+
+        mac_address: str = packet.getlayer(Ether).src
+
+        if ip_address is not None and mac_address is not None:
+            callback(DHCPRequest(ip_address, hostname, mac_address))
+
+    return _handle_dhcp_packet
+
+
 class AIODHCPWatcher:
     """Class to watch dhcp requests."""
 
@@ -46,55 +97,6 @@ class AIODHCPWatcher:
 
     def start(self) -> None:
         """Start watching for dhcp packets."""
-        # Local import because importing from scapy has side effects such as opening
-        # sockets
-        from scapy import arch  # pylint: disable=import-outside-toplevel # noqa: F401
-        from scapy.layers.dhcp import DHCP  # pylint: disable=import-outside-toplevel
-        from scapy.layers.inet import IP  # pylint: disable=import-outside-toplevel
-        from scapy.layers.l2 import Ether  # pylint: disable=import-outside-toplevel
-
-        #
-        # Importing scapy.sendrecv will cause a scapy resync which will
-        # import scapy.arch.read_routes which will import scapy.sendrecv
-        #
-        # We avoid this circular import by importing arch above to ensure
-        # the module is loaded and avoid the problem
-        #
-
-        def _handle_dhcp_packet(packet: "Packet") -> None:
-            """Process a dhcp packet."""
-            if not (dhcp_packet := packet.getlayer(DHCP)):
-                return
-
-            if TYPE_CHECKING:
-                dhcp_packet = cast(DHCP, dhcp_packet)
-
-            options: Iterable[tuple[str, int | bytes | None]] = dhcp_packet.options
-
-            options_dict = {
-                option[0]: option[1] for option in options if len(option) >= 2
-            }
-
-            if options_dict.get("message-type") != DHCP_REQUEST:
-                # Not a DHCP request
-                return
-
-            ip_address: str = options_dict.get("requested_addr") or packet[IP].src  # type: ignore[assignment]
-
-            hostname = ""
-            if (hostname_bytes := options_dict.get("hostname")) and isinstance(
-                hostname_bytes, bytes
-            ):
-                try:
-                    hostname = hostname_bytes.decode()
-                except (AttributeError, UnicodeDecodeError):
-                    pass
-
-            mac_address: str = packet[Ether].src
-
-            if ip_address is not None and mac_address is not None:
-                self._callback(DHCPRequest(ip_address, hostname, mac_address))
-
         # disable scapy promiscuous mode as we do not need it
         conf.sniff_promisc = 0
 
@@ -120,6 +122,7 @@ class AIODHCPWatcher:
             return
 
         self._sock = sock
+        _handle_dhcp_packet = make_packet_handler(self._callback)
         self._loop.add_reader(fileno, partial(self._on_data, _handle_dhcp_packet, sock))
 
     def _on_data(
@@ -182,4 +185,4 @@ def start(callback: Callable[[DHCPRequest], None]) -> Callable[[], None]:
     return watcher.stop
 
 
-__all__ = ["start", "DHCPRequest"]
+__all__ = ["start", "DHCPRequest", "make_packet_handler"]
