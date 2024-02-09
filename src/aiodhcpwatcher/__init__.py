@@ -162,7 +162,9 @@ class AIODHCPWatcher:
         if hasattr(sock, "set_nonblock"):
             # Not all classes have set_nonblock so we have to call fcntl directly
             # in the event its not implemented
-            sock.set_nonblock()
+            sock.set_nonblock(True)
+        elif hasattr(sock, "pcap_fd"):
+            sock.pcap_fd.setnonblock(True)
         else:
             import fcntl  # pylint: disable=import-outside-toplevel
 
