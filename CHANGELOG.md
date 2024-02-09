@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.7.0 (2024-02-09)
+
+### Feature
+
+- Add helper to load scapy in the executor since it can block the loop (#13) ([`0ec1983`](https://github.com/bdraco/aiodhcpwatcher/commit/0ec19835ccd52e5c71c5d15c5e48c0382b4aea4f))
+
 ## v0.6.0 (2024-02-08)
 
 ### Feature
