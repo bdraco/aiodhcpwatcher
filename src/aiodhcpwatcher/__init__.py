@@ -80,6 +80,8 @@ def make_packet_handler(
 class AIODHCPWatcher:
     """Class to watch dhcp requests."""
 
+    _init_scapy_done = False
+
     def __init__(self, callback: Callable[[DHCPRequest], None]) -> None:
         """Initialize watcher."""
         self._loop = asyncio.get_running_loop()
@@ -95,22 +97,7 @@ class AIODHCPWatcher:
 
     def start(self) -> None:
         """Start watching for dhcp packets."""
-        # Local import because importing from scapy has side effects such as opening
-        # sockets
-        # We must import l2 before testing the filter or it will fail
-
-        #
-        # Importing scapy.sendrecv will cause a scapy resync which will
-        # import scapy.arch.read_routes which will import scapy.sendrecv
-        #
-        # We avoid this circular import by importing arch above to ensure
-        # the module is loaded and avoid the problem
-        #
-        from scapy import arch  # pylint: disable=import-outside-toplevel # noqa: F401
-        from scapy.layers import (
-            l2,  # pylint: disable=import-outside-toplevel # noqa: F401
-        )
-
+        _init_scapy()
         # disable scapy promiscuous mode as we do not need it
         conf.sniff_promisc = 0
 
@@ -206,4 +193,32 @@ def start(callback: Callable[[DHCPRequest], None]) -> Callable[[], None]:
     return watcher.stop
 
 
-__all__ = ["start", "DHCPRequest", "make_packet_handler"]
+async def async_init() -> None:
+    """Init scapy in the executor since it blocks for a bit."""
+    await asyncio.get_running_loop().run_in_executor(None, _init_scapy)
+
+
+def _init_scapy() -> None:
+    """Init scapy in the executor since it blocks for a bit."""
+    # Local import because importing from scapy has side effects such as opening
+    # sockets
+    # We must import l2 before testing the filter or it will fail
+
+    #
+    # Importing scapy.sendrecv will cause a scapy resync which will
+    # import scapy.arch.read_routes which will import scapy.sendrecv
+    #
+    # We avoid this circular import by importing arch above to ensure
+    # the module is loaded and avoid the problem
+    #
+    if AIODHCPWatcher._init_scapy_done:
+        return
+    from scapy import arch  # pylint: disable=import-outside-toplevel # noqa: F401
+    from scapy.layers import (
+        l2,  # pylint: disable=import-outside-toplevel # noqa: F401
+    )
+
+    AIODHCPWatcher._init_scapy_done = True
+
+
+__all__ = ["start", "DHCPRequest", "make_packet_handler", "async_init"]
