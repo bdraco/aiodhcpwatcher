@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.8.0 (2024-02-09)
+
+### Feature
+
+- Add support for setting nonblock with pcap (#14) ([`3287b50`](https://github.com/bdraco/aiodhcpwatcher/commit/3287b500ab4dc546257cdcb144746f7d8fa1d37c))
+
 ## v0.7.0 (2024-02-09)
 
 ### Feature
