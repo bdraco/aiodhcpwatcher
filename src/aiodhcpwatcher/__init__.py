@@ -47,7 +47,7 @@ def make_packet_handler(
 
         options_dict: dict[str, int | bytes | None] = {}
         for option in options:
-            if type(option) is tuple:
+            if type(option) is tuple and len(option) > 1:
                 options_dict[option[0]] = option[1]
             if option == "end":
                 break
