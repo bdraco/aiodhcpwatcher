@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.8.1 (2024-03-11)
+
+### Fix
+
+- Add a guard for when the options tuple is only one item (#15) ([`37a7371`](https://github.com/bdraco/aiodhcpwatcher/commit/37a7371693f693871947638bf85c69d7a1636bc1))
+
 ## v0.8.0 (2024-02-09)
 
 ### Feature
