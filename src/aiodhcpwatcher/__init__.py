@@ -86,16 +86,18 @@ class AIODHCPWatcher:
         """Initialize watcher."""
         self._loop = asyncio.get_running_loop()
         self._sock: Any | None = None
+        self._fileno: int | None = None
         self._callback = callback
 
     def stop(self) -> None:
         """Stop watching for DHCP packets."""
-        if self._sock:
-            self._loop.remove_reader(self._sock.fileno())
+        if self._sock and self._fileno:
+            self._loop.remove_reader(self._fileno)
             self._sock.close()
             self._sock = None
+            self._fileno = None
 
-    def start(self) -> None:
+    def _start(self) -> Callable[["Packet"], None] | None:
         """Start watching for dhcp packets."""
         _init_scapy()
         # disable scapy promiscuous mode as we do not need it
@@ -108,11 +110,11 @@ class AIODHCPWatcher:
                 "Cannot watch for dhcp packets without a functional packet filter: %s",
                 ex,
             )
-            return
+            return None
 
         try:
             sock = self._make_listen_socket(FILTER)
-            fileno = sock.fileno()
+            self._fileno = sock.fileno()
         except (Scapy_Exception, OSError) as ex:
             if os.geteuid() == 0:
                 _LOGGER.error("Cannot watch for dhcp packets: %s", ex)
@@ -120,18 +122,33 @@ class AIODHCPWatcher:
                 _LOGGER.debug(
                     "Cannot watch for dhcp packets without root or CAP_NET_RAW: %s", ex
                 )
-            return
+            return None
 
         self._sock = sock
-        _handle_dhcp_packet = make_packet_handler(self._callback)
+        return make_packet_handler(self._callback)
+
+    async def async_start(self) -> None:
+        """Start watching for dhcp packets."""
+        if not (
+            _handle_dhcp_packet := await asyncio.get_running_loop().run_in_executor(
+                None, self._start
+            )
+        ):
+            return
+        sock = self._sock
+        fileno = self._fileno
+        if TYPE_CHECKING:
+            assert sock is not None
+            assert fileno is not None
         try:
             self._loop.add_reader(
                 fileno, partial(self._on_data, _handle_dhcp_packet, sock)
             )
         except PermissionError as ex:
             _LOGGER.error("Permission denied to watch for dhcp packets: %s", ex)
-            self._sock.close()
+            sock.close()
             self._sock = None
+            self._fileno = None
 
     def _on_data(
         self, handle_dhcp_packet: Callable[["Packet"], None], sock: Any
@@ -188,10 +205,10 @@ class AIODHCPWatcher:
         compile_filter(cap_filter)
 
 
-def start(callback: Callable[[DHCPRequest], None]) -> Callable[[], None]:
+async def async_start(callback: Callable[[DHCPRequest], None]) -> Callable[[], None]:
     """Listen for DHCP requests."""
     watcher = AIODHCPWatcher(callback)
-    watcher.start()
+    await watcher.async_start()
     return watcher.stop
 
 
