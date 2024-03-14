@@ -216,8 +216,20 @@ def _init_scapy() -> None:
     if AIODHCPWatcher._init_scapy_done:
         return
     from scapy import arch  # pylint: disable=import-outside-toplevel # noqa: F401
+    from scapy.arch.common import (  # pylint: disable=import-outside-toplevel # noqa: F401
+        compile_filter,
+    )
     from scapy.layers import (
         l2,  # pylint: disable=import-outside-toplevel # noqa: F401
+    )
+    from scapy.layers.dhcp import (
+        DHCP,  # pylint: disable=import-outside-toplevel # noqa: F401
+    )
+    from scapy.layers.inet import (
+        IP,  # pylint: disable=import-outside-toplevel # noqa: F401
+    )
+    from scapy.layers.l2 import (
+        Ether,  # pylint: disable=import-outside-toplevel # noqa: F401
     )
 
     AIODHCPWatcher._init_scapy_done = True
