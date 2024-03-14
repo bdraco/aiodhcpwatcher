@@ -13,7 +13,7 @@ from scapy.error import Scapy_Exception
 from scapy.layers.l2 import Ether
 from scapy.packet import Packet
 
-from aiodhcpwatcher import DHCPRequest, async_init, start
+from aiodhcpwatcher import DHCPRequest, async_init, async_start
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -188,7 +188,7 @@ async def _init_scapy():
 @pytest.mark.asyncio
 async def test_start_stop():
     """Test start and stop."""
-    start(lambda data: None)()
+    (await async_start(lambda data: None))()
 
 
 @pytest.mark.asyncio
@@ -205,7 +205,7 @@ async def test_watcher():
     with patch(
         "aiodhcpwatcher.AIODHCPWatcher._make_listen_socket", return_value=mock_socket
     ), patch("aiodhcpwatcher.AIODHCPWatcher._verify_working_pcap"):
-        stop = start(_handle_dhcp_packet)
+        stop = await async_start(_handle_dhcp_packet)
         for test_packet in (
             RAW_DHCP_REQUEST_WITHOUT_HOSTNAME,
             RAW_DHCP_REQUEST,
@@ -263,7 +263,7 @@ async def test_setup_fails_broken_filtering(caplog: pytest.LogCaptureFixture) ->
         "scapy.arch.common.compile_filter",
         side_effect=Scapy_Exception,
     ):
-        start(lambda data: None)()
+        (await async_start(lambda data: None))()
     assert (
         "Cannot watch for dhcp packets without a functional packet filter"
         in caplog.text
@@ -280,7 +280,7 @@ async def test_setup_fails_as_root(caplog: pytest.LogCaptureFixture) -> None:
         "resolve_iface",
         side_effect=Scapy_Exception,
     ):
-        start(lambda data: None)()
+        (await async_start(lambda data: None))()
     assert "Cannot watch for dhcp packets" in caplog.text
 
 
@@ -295,7 +295,7 @@ async def test_setup_fails_as_non_root(caplog: pytest.LogCaptureFixture) -> None
         "resolve_iface",
         side_effect=Scapy_Exception,
     ):
-        start(lambda data: None)()
+        (await async_start(lambda data: None))()
     assert "Cannot watch for dhcp packets without root or CAP_NET_RAW" in caplog.text
 
 
@@ -311,6 +311,6 @@ async def test_permission_denied_to_add_reader(
         interfaces,
         "resolve_iface",
     ):
-        start(lambda data: None)()
+        (await async_start(lambda data: None))()
 
     assert "Permission denied to watch for dhcp packets" in caplog.text
