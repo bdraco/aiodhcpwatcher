@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.0 (2024-03-14)
+
+### Breaking
+
+- Run scapy filter creation in the executor (#17) ([`e5965d3`](https://github.com/bdraco/aiodhcpwatcher/commit/e5965d335b8e02745ab727acef34bbb96f6a6076))
+
 ## v0.8.2 (2024-03-14)
 
 ### Fix
