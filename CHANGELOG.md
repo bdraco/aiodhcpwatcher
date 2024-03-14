@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.8.2 (2024-03-14)
+
+### Fix
+
+- Ensure all scapy modules are loaded in the executor (#16) ([`694c831`](https://github.com/bdraco/aiodhcpwatcher/commit/694c83121995ee756a50ef158be71bf50a600f65))
+
 ## v0.8.1 (2024-03-11)
 
 ### Fix
