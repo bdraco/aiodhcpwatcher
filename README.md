@@ -56,7 +56,7 @@ def _async_process_dhcp_request(response: aiodhcpwatcher.DHCPRequest) -> None:
     print(response)
 
 async def run():
-    cancel = aiodhcpwatcher.start(_async_process_dhcp_request)
+    cancel = await aiodhcpwatcher.async_start(_async_process_dhcp_request)
     await asyncio.Event().wait()
 
 asyncio.run(run())
