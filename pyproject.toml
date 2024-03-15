@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "aiodhcpwatcher"
-version = "1.0.0"
+version = "1.0.1"
 description = "Watch for DHCP packets with asyncio"
 authors = ["J. Nick Koston <nick@koston.org>"]
 license = "GNU General Public License v3"

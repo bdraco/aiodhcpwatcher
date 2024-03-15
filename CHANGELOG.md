@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.1 (2024-03-15)
+
+### Fix
+
+- Update readme example for breaking changes in 1.0.0 (#19) ([`fd53e64`](https://github.com/bdraco/aiodhcpwatcher/commit/fd53e64b64f74af02c68e7e13261cbf23370be11))
+
 ## v1.0.0 (2024-03-14)
 
 ### Breaking
