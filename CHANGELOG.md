@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.2 (2024-06-24)
+
+### Fix
+
+- Licensing classifier (#21) ([`bdfa9ef`](https://github.com/bdraco/aiodhcpwatcher/commit/bdfa9ef9bc3cbb1fecbf6a5848615e5fd2e619fb))
+
 ## v1.0.1 (2024-03-15)
 
 ### Fix
