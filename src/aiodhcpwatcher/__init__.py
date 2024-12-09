@@ -252,4 +252,4 @@ def _init_scapy() -> None:
     AIODHCPWatcher._init_scapy_done = True
 
 
-__all__ = ["start", "DHCPRequest", "make_packet_handler", "async_init"]
+__all__ = ["DHCPRequest", "async_init", "make_packet_handler", "start"]
