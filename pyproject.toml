@@ -28,7 +28,7 @@ scapy = ">=2.5.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.0"
-pytest-cov = "^3.0"
+pytest-cov = ">=3,<7"
 pytest-asyncio = "^0.23.4"
 
 [tool.poetry.group.docs]
