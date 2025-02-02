@@ -3,6 +3,7 @@ __version__ = "1.0.2"
 import asyncio
 import logging
 import os
+import socket
 from dataclasses import dataclass
 from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, Iterable
@@ -85,9 +86,30 @@ class AIODHCPWatcher:
     def __init__(self, callback: Callable[[DHCPRequest], None]) -> None:
         """Initialize watcher."""
         self._loop = asyncio.get_running_loop()
-        self._sock: Any | None = None
+        self._sock: socket.socket | None = None
         self._fileno: int | None = None
         self._callback = callback
+        self._shutdown: bool = False
+        self._restart_timer: asyncio.TimerHandle | None = None
+
+    def restart_soon(self) -> None:
+        """Restart the watcher soon."""
+        if self._restart_timer:
+            return
+        _LOGGER.debug("Restarting watcher in 30 seconds")
+        self._restart_timer = self._loop.call_later(30, self._execute_restart)
+
+    def _execute_restart(self) -> None:
+        """Execute the restart."""
+        self._restart_timer = None
+        if not self._shutdown:
+            _LOGGER.debug("Restarting watcher")
+            self._loop.create_task(self.async_start())
+
+    def shutdown(self) -> None:
+        """Shutdown the watcher."""
+        self._shutdown = True
+        self.stop()
 
     def stop(self) -> None:
         """Stop watching for DHCP packets."""
@@ -96,6 +118,9 @@ class AIODHCPWatcher:
             self._sock.close()
             self._sock = None
             self._fileno = None
+        if self._restart_timer:
+            self._restart_timer.cancel()
+            self._restart_timer = None
 
     def _start(self) -> Callable[["Packet"], None] | None:
         """Start watching for dhcp packets."""
@@ -129,12 +154,14 @@ class AIODHCPWatcher:
 
     async def async_start(self) -> None:
         """Start watching for dhcp packets."""
+        if self._shutdown:
+            return
         if not (
-            _handle_dhcp_packet := await asyncio.get_running_loop().run_in_executor(
-                None, self._start
-            )
+            _handle_dhcp_packet := await self._loop.run_in_executor(None, self._start)
         ):
             return
+        if self._shutdown:  # may change during the executor call
+            return  # type: ignore[unreachable]
         sock = self._sock
         fileno = self._fileno
         if TYPE_CHECKING:
@@ -158,9 +185,15 @@ class AIODHCPWatcher:
             data = sock.recv()
         except (BlockingIOError, InterruptedError):
             return
+        except OSError as ex:
+            _LOGGER.error("Error while processing dhcp packet: %s", ex)
+            self.stop()
+            self.restart_soon()
+            return
         except BaseException as ex:  # pylint: disable=broad-except
             _LOGGER.exception("Fatal error while processing dhcp packet: %s", ex)
-            self.stop()
+            self.shutdown()
+            return
 
         if data:
             handle_dhcp_packet(data)
@@ -209,7 +242,7 @@ async def async_start(callback: Callable[[DHCPRequest], None]) -> Callable[[], N
     """Listen for DHCP requests."""
     watcher = AIODHCPWatcher(callback)
     await watcher.async_start()
-    return watcher.stop
+    return watcher.shutdown
 
 
 async def async_init() -> None:
