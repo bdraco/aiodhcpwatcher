@@ -116,17 +116,17 @@ class AIODHCPWatcher:
 
     def stop(self) -> None:
         """Stop watching for DHCP packets."""
-        if self._sock and self._fileno:
-            self._loop.remove_reader(self._fileno)
-            self._sock.close()
-            self._sock = None
-            self._fileno = None
         if self._restart_timer:
             self._restart_timer.cancel()
             self._restart_timer = None
         if self._restart_task:
             self._restart_task.cancel()
             self._restart_task = None
+        if self._sock and self._fileno:
+            self._loop.remove_reader(self._fileno)
+            self._sock.close()
+            self._sock = None
+            self._fileno = None
 
     def _start(self) -> Callable[["Packet"], None] | None:
         """Start watching for dhcp packets."""
