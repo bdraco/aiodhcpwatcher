@@ -16,7 +16,7 @@ from scapy.error import Scapy_Exception
 from scapy.layers.l2 import Ether
 from scapy.packet import Packet
 
-from aiodhcpwatcher import DHCPRequest, async_init, async_start
+from aiodhcpwatcher import AUTO_RECOVER_TIME, DHCPRequest, async_init, async_start
 
 utcnow = partial(datetime.now, timezone.utc)
 _MONOTONIC_RESOLUTION = time.get_clock_info("monotonic").resolution
@@ -360,7 +360,8 @@ async def test_watcher_temp_exception(caplog: pytest.LogCaptureFixture) -> None:
         "aiodhcpwatcher.AIODHCPWatcher._make_listen_socket", return_value=mock_socket
     ), patch("aiodhcpwatcher.AIODHCPWatcher._verify_working_pcap"):
 
-        async_fire_time_changed(utcnow() + timedelta(seconds=30))
+        async_fire_time_changed(utcnow() + timedelta(seconds=AUTO_RECOVER_TIME))
+        await asyncio.sleep(0)
         await asyncio.sleep(0)
 
         for test_packet in (
