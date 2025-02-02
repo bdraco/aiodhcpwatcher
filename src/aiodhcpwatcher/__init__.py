@@ -95,10 +95,9 @@ class AIODHCPWatcher:
 
     def restart_soon(self) -> None:
         """Restart the watcher soon."""
-        if self._restart_timer:
-            return
-        _LOGGER.debug("Restarting watcher in 30 seconds")
-        self._restart_timer = self._loop.call_later(30, self._execute_restart)
+        if not self._restart_timer:
+            _LOGGER.debug("Restarting watcher in 30 seconds")
+            self._restart_timer = self._loop.call_later(30, self._execute_restart)
 
     def _execute_restart(self) -> None:
         """Execute the restart."""
