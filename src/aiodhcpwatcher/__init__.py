@@ -4,6 +4,7 @@ import asyncio
 import logging
 import os
 import socket
+import sys
 from dataclasses import dataclass
 from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, Iterable
@@ -111,7 +112,11 @@ class AIODHCPWatcher:
         self._restart_timer = None
         if not self._shutdown:
             _LOGGER.debug("Restarting watcher")
-            self._restart_task = self._loop.create_task(self.async_start())
+            kwargs: dict[str, Any] = (
+                {"eager_start": True} if sys.version_info >= (3, 12) else {}
+            )
+            task = asyncio.Task(self.async_start(), **kwargs)
+            self._restart_task = task
             self._restart_task.add_done_callback(self._clear_restart_task)
 
     def shutdown(self) -> None:
