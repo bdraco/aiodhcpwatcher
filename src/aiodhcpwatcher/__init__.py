@@ -166,13 +166,15 @@ class AIODHCPWatcher:
     async def async_start(self) -> None:
         """Start watching for dhcp packets."""
         if self._shutdown:
+            _LOGGER.debug("Not starting watcher because it is shutdown")
             return
         if not (
             _handle_dhcp_packet := await self._loop.run_in_executor(None, self._start)
         ):
             return
         if self._shutdown:  # may change during the executor call
-            return  # type: ignore[unreachable]
+            _LOGGER.debug("Not starting watcher because it is shutdown after init")  # type: ignore[unreachable]
+            return
         sock = self._sock
         fileno = self._fileno
         if TYPE_CHECKING:
@@ -187,6 +189,7 @@ class AIODHCPWatcher:
             sock.close()
             self._sock = None
             self._fileno = None
+        _LOGGER.debug("Started watching for dhcp packets")
 
     def _on_data(
         self, handle_dhcp_packet: Callable[["Packet"], None], sock: Any
