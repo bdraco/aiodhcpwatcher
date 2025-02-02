@@ -115,7 +115,8 @@ class AIODHCPWatcher:
             kwargs: dict[str, Any] = (
                 {"eager_start": True} if sys.version_info >= (3, 12) else {}
             )
-            self._restart_task = asyncio.Task(self.async_start(), **kwargs)
+            task = asyncio.Task(self.async_start(), **kwargs)
+            self._restart_task = task
             self._restart_task.add_done_callback(self._clear_restart_task)
 
     def shutdown(self) -> None:
