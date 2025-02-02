@@ -338,9 +338,7 @@ async def test_watcher_temp_exception(caplog: pytest.LogCaptureFixture) -> None:
     ), patch("aiodhcpwatcher.AIODHCPWatcher._verify_working_pcap"):
 
         async_fire_time_changed(utcnow() + timedelta(seconds=AUTO_RECOVER_TIME))
-        await asyncio.sleep(0)
-        await asyncio.sleep(0)
-        await asyncio.sleep(0)
+        await asyncio.sleep(0.1)
 
         await _write_test_packets_to_pipe(w)
 
