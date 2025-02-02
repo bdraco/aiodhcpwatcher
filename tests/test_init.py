@@ -184,6 +184,23 @@ RAW_DHCP_REQUEST_WITHOUT_HOSTNAME = (
 )
 
 
+async def _write_test_packets_to_pipe(w: int) -> None:
+    for test_packet in (
+        RAW_DHCP_REQUEST_WITHOUT_HOSTNAME,
+        RAW_DHCP_REQUEST,
+        RAW_DHCP_RENEWAL,
+        RAW_DHCP_REQUEST_WITHOUT_HOSTNAME,
+        DHCP_REQUEST_BAD_UTF8,
+        DHCP_REQUEST_IDNA,
+    ):
+        os.write(w, test_packet)
+        for _ in range(3):
+            await asyncio.sleep(0)
+        os.write(w, b"garbage")
+        for _ in range(3):
+            await asyncio.sleep(0)
+
+
 class MockSocket:
 
     def __init__(self, reader: int, exc: type[Exception] | None = None) -> None:
@@ -232,20 +249,7 @@ async def test_watcher():
         "aiodhcpwatcher.AIODHCPWatcher._make_listen_socket", return_value=mock_socket
     ), patch("aiodhcpwatcher.AIODHCPWatcher._verify_working_pcap"):
         stop = await async_start(_handle_dhcp_packet)
-        for test_packet in (
-            RAW_DHCP_REQUEST_WITHOUT_HOSTNAME,
-            RAW_DHCP_REQUEST,
-            RAW_DHCP_RENEWAL,
-            RAW_DHCP_REQUEST_WITHOUT_HOSTNAME,
-            DHCP_REQUEST_BAD_UTF8,
-            DHCP_REQUEST_IDNA,
-        ):
-            os.write(w, test_packet)
-            for _ in range(3):
-                await asyncio.sleep(0)
-            os.write(w, b"garbage")
-            for _ in range(3):
-                await asyncio.sleep(0)
+        await _write_test_packets_to_pipe(w)
 
         stop()
 
@@ -296,20 +300,7 @@ async def test_watcher_fatal_exception(caplog: pytest.LogCaptureFixture) -> None
         "aiodhcpwatcher.AIODHCPWatcher._make_listen_socket", return_value=mock_socket
     ), patch("aiodhcpwatcher.AIODHCPWatcher._verify_working_pcap"):
         stop = await async_start(_handle_dhcp_packet)
-        for test_packet in (
-            RAW_DHCP_REQUEST_WITHOUT_HOSTNAME,
-            RAW_DHCP_REQUEST,
-            RAW_DHCP_RENEWAL,
-            RAW_DHCP_REQUEST_WITHOUT_HOSTNAME,
-            DHCP_REQUEST_BAD_UTF8,
-            DHCP_REQUEST_IDNA,
-        ):
-            os.write(w, test_packet)
-            for _ in range(3):
-                await asyncio.sleep(0)
-            os.write(w, b"garbage")
-            for _ in range(3):
-                await asyncio.sleep(0)
+        await _write_test_packets_to_pipe(w)
 
         stop()
 
@@ -334,21 +325,7 @@ async def test_watcher_temp_exception(caplog: pytest.LogCaptureFixture) -> None:
         "aiodhcpwatcher.AIODHCPWatcher._make_listen_socket", return_value=mock_socket
     ), patch("aiodhcpwatcher.AIODHCPWatcher._verify_working_pcap"):
         stop = await async_start(_handle_dhcp_packet)
-        for test_packet in (
-            RAW_DHCP_REQUEST_WITHOUT_HOSTNAME,
-            RAW_DHCP_REQUEST,
-            RAW_DHCP_RENEWAL,
-            RAW_DHCP_REQUEST_WITHOUT_HOSTNAME,
-            DHCP_REQUEST_BAD_UTF8,
-            DHCP_REQUEST_IDNA,
-        ):
-            os.write(w, test_packet)
-            for _ in range(3):
-                await asyncio.sleep(0)
-            os.write(w, b"garbage")
-            for _ in range(3):
-                await asyncio.sleep(0)
-
+        await _write_test_packets_to_pipe(w)
     os.close(r)
     os.close(w)
     assert requests == []
@@ -365,20 +342,7 @@ async def test_watcher_temp_exception(caplog: pytest.LogCaptureFixture) -> None:
         await asyncio.sleep(0)
         await asyncio.sleep(0)
 
-        for test_packet in (
-            RAW_DHCP_REQUEST_WITHOUT_HOSTNAME,
-            RAW_DHCP_REQUEST,
-            RAW_DHCP_RENEWAL,
-            RAW_DHCP_REQUEST_WITHOUT_HOSTNAME,
-            DHCP_REQUEST_BAD_UTF8,
-            DHCP_REQUEST_IDNA,
-        ):
-            os.write(w, test_packet)
-            for _ in range(3):
-                await asyncio.sleep(0)
-            os.write(w, b"garbage")
-            for _ in range(3):
-                await asyncio.sleep(0)
+        await _write_test_packets_to_pipe(w)
 
         stop()
 
@@ -431,20 +395,7 @@ async def test_watcher_stop_after_temp_exception(
         "aiodhcpwatcher.AIODHCPWatcher._make_listen_socket", return_value=mock_socket
     ), patch("aiodhcpwatcher.AIODHCPWatcher._verify_working_pcap"):
         stop = await async_start(_handle_dhcp_packet)
-        for test_packet in (
-            RAW_DHCP_REQUEST_WITHOUT_HOSTNAME,
-            RAW_DHCP_REQUEST,
-            RAW_DHCP_RENEWAL,
-            RAW_DHCP_REQUEST_WITHOUT_HOSTNAME,
-            DHCP_REQUEST_BAD_UTF8,
-            DHCP_REQUEST_IDNA,
-        ):
-            os.write(w, test_packet)
-            for _ in range(3):
-                await asyncio.sleep(0)
-            os.write(w, b"garbage")
-            for _ in range(3):
-                await asyncio.sleep(0)
+        await _write_test_packets_to_pipe(w)
 
     os.close(r)
     os.close(w)
@@ -460,21 +411,7 @@ async def test_watcher_stop_after_temp_exception(
 
         async_fire_time_changed(utcnow() + timedelta(seconds=30))
         await asyncio.sleep(0)
-
-        for test_packet in (
-            RAW_DHCP_REQUEST_WITHOUT_HOSTNAME,
-            RAW_DHCP_REQUEST,
-            RAW_DHCP_RENEWAL,
-            RAW_DHCP_REQUEST_WITHOUT_HOSTNAME,
-            DHCP_REQUEST_BAD_UTF8,
-            DHCP_REQUEST_IDNA,
-        ):
-            os.write(w, test_packet)
-            for _ in range(3):
-                await asyncio.sleep(0)
-            os.write(w, b"garbage")
-            for _ in range(3):
-                await asyncio.sleep(0)
+        await _write_test_packets_to_pipe(w)
 
         stop()
 
