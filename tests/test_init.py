@@ -413,6 +413,75 @@ async def test_watcher_temp_exception(caplog: pytest.LogCaptureFixture) -> None:
 
 
 @pytest.mark.asyncio
+async def test_watcher_stop_after_temp_exception(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test mocking a dhcp packet to the watcher."""
+    requests: list[DHCPRequest] = []
+
+    def _handle_dhcp_packet(data: DHCPRequest) -> None:
+        requests.append(data)
+
+    r, w = os.pipe()
+
+    mock_socket = MockSocket(r, OSError)
+    with patch(
+        "aiodhcpwatcher.AIODHCPWatcher._make_listen_socket", return_value=mock_socket
+    ), patch("aiodhcpwatcher.AIODHCPWatcher._verify_working_pcap"):
+        stop = await async_start(_handle_dhcp_packet)
+        for test_packet in (
+            RAW_DHCP_REQUEST_WITHOUT_HOSTNAME,
+            RAW_DHCP_REQUEST,
+            RAW_DHCP_RENEWAL,
+            RAW_DHCP_REQUEST_WITHOUT_HOSTNAME,
+            DHCP_REQUEST_BAD_UTF8,
+            DHCP_REQUEST_IDNA,
+        ):
+            os.write(w, test_packet)
+            for _ in range(3):
+                await asyncio.sleep(0)
+            os.write(w, b"garbage")
+            for _ in range(3):
+                await asyncio.sleep(0)
+
+    os.close(r)
+    os.close(w)
+    assert requests == []
+    assert "Error while processing dhcp packet" in caplog.text
+    stop()
+
+    r, w = os.pipe()
+    mock_socket = MockSocket(r)
+    with patch(
+        "aiodhcpwatcher.AIODHCPWatcher._make_listen_socket", return_value=mock_socket
+    ), patch("aiodhcpwatcher.AIODHCPWatcher._verify_working_pcap"):
+
+        async_fire_time_changed(utcnow() + timedelta(seconds=30))
+        await asyncio.sleep(0)
+
+        for test_packet in (
+            RAW_DHCP_REQUEST_WITHOUT_HOSTNAME,
+            RAW_DHCP_REQUEST,
+            RAW_DHCP_RENEWAL,
+            RAW_DHCP_REQUEST_WITHOUT_HOSTNAME,
+            DHCP_REQUEST_BAD_UTF8,
+            DHCP_REQUEST_IDNA,
+        ):
+            os.write(w, test_packet)
+            for _ in range(3):
+                await asyncio.sleep(0)
+            os.write(w, b"garbage")
+            for _ in range(3):
+                await asyncio.sleep(0)
+
+        stop()
+
+    os.close(r)
+    os.close(w)
+    assert requests == []
+
+
+@pytest.mark.asyncio
 async def test_setup_fails_broken_filtering(caplog: pytest.LogCaptureFixture) -> None:
     """Test that the setup fails when filtering is broken."""
     caplog.set_level(logging.DEBUG)
