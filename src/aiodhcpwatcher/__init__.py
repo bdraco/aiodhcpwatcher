@@ -105,8 +105,6 @@ class AIODHCPWatcher:
     def _execute_restart(self) -> None:
         """Execute the restart."""
         self._restart_timer = None
-        if self._restart_task and not self._restart_task.done():
-            raise RuntimeError("Restart task already running")
         if not self._shutdown:
             _LOGGER.debug("Restarting watcher")
             self._restart_task = self._loop.create_task(self.async_start())
