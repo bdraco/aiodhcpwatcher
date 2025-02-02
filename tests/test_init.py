@@ -1,6 +1,9 @@
 import asyncio
 import logging
 import os
+import time
+from datetime import datetime, timedelta, timezone
+from functools import partial
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -13,9 +16,29 @@ from scapy.error import Scapy_Exception
 from scapy.layers.l2 import Ether
 from scapy.packet import Packet
 
-from aiodhcpwatcher import DHCPRequest, async_init, async_start
+from aiodhcpwatcher import AUTO_RECOVER_TIME, DHCPRequest, async_init, async_start
+
+utcnow = partial(datetime.now, timezone.utc)
+_MONOTONIC_RESOLUTION = time.get_clock_info("monotonic").resolution
 
 logging.basicConfig(level=logging.DEBUG)
+
+
+def async_fire_time_changed(utc_datetime: datetime) -> None:
+    timestamp = utc_datetime.timestamp()
+    loop = asyncio.get_running_loop()
+    for task in list(loop._scheduled):  # type: ignore[attr-defined]
+        if not isinstance(task, asyncio.TimerHandle):
+            continue
+        if task.cancelled():
+            continue
+
+        mock_seconds_into_future = timestamp - time.time()
+        future_seconds = task.when() - (loop.time() + _MONOTONIC_RESOLUTION)
+
+        if mock_seconds_into_future >= future_seconds:
+            task._run()
+            task.cancel()
 
 
 # connect b8:b7:f1:6d:b5:33 192.168.210.56
@@ -161,14 +184,34 @@ RAW_DHCP_REQUEST_WITHOUT_HOSTNAME = (
 )
 
 
+async def _write_test_packets_to_pipe(w: int) -> None:
+    for test_packet in (
+        RAW_DHCP_REQUEST_WITHOUT_HOSTNAME,
+        RAW_DHCP_REQUEST,
+        RAW_DHCP_RENEWAL,
+        RAW_DHCP_REQUEST_WITHOUT_HOSTNAME,
+        DHCP_REQUEST_BAD_UTF8,
+        DHCP_REQUEST_IDNA,
+    ):
+        os.write(w, test_packet)
+        for _ in range(3):
+            await asyncio.sleep(0)
+        os.write(w, b"garbage")
+        for _ in range(3):
+            await asyncio.sleep(0)
+
+
 class MockSocket:
 
-    def __init__(self, reader: int) -> None:
+    def __init__(self, reader: int, exc: type[Exception] | None = None) -> None:
         self._fileno = reader
         self.close = MagicMock()
         self.buffer = b""
+        self.exc = exc
 
     def recv(self) -> Packet:
+        if self.exc:
+            raise self.exc
         raw = os.read(self._fileno, 1000000)
         try:
             packet = Ether(raw)
@@ -206,20 +249,7 @@ async def test_watcher():
         "aiodhcpwatcher.AIODHCPWatcher._make_listen_socket", return_value=mock_socket
     ), patch("aiodhcpwatcher.AIODHCPWatcher._verify_working_pcap"):
         stop = await async_start(_handle_dhcp_packet)
-        for test_packet in (
-            RAW_DHCP_REQUEST_WITHOUT_HOSTNAME,
-            RAW_DHCP_REQUEST,
-            RAW_DHCP_RENEWAL,
-            RAW_DHCP_REQUEST_WITHOUT_HOSTNAME,
-            DHCP_REQUEST_BAD_UTF8,
-            DHCP_REQUEST_IDNA,
-        ):
-            os.write(w, test_packet)
-            for _ in range(3):
-                await asyncio.sleep(0)
-            os.write(w, b"garbage")
-            for _ in range(3):
-                await asyncio.sleep(0)
+        await _write_test_packets_to_pipe(w)
 
         stop()
 
@@ -253,6 +283,139 @@ async def test_watcher():
             mac_address="b8:b7:f1:6d:b5:33",
         ),
     ]
+
+
+@pytest.mark.asyncio
+async def test_watcher_fatal_exception(caplog: pytest.LogCaptureFixture) -> None:
+    """Test mocking a dhcp packet to the watcher."""
+    requests: list[DHCPRequest] = []
+
+    def _handle_dhcp_packet(data: DHCPRequest) -> None:
+        requests.append(data)
+
+    r, w = os.pipe()
+
+    mock_socket = MockSocket(r, ValueError)
+    with patch(
+        "aiodhcpwatcher.AIODHCPWatcher._make_listen_socket", return_value=mock_socket
+    ), patch("aiodhcpwatcher.AIODHCPWatcher._verify_working_pcap"):
+        stop = await async_start(_handle_dhcp_packet)
+        await _write_test_packets_to_pipe(w)
+
+        stop()
+
+    os.close(r)
+    os.close(w)
+    assert requests == []
+    assert "Fatal error while processing dhcp packet" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_watcher_temp_exception(caplog: pytest.LogCaptureFixture) -> None:
+    """Test mocking a dhcp packet to the watcher."""
+    requests: list[DHCPRequest] = []
+
+    def _handle_dhcp_packet(data: DHCPRequest) -> None:
+        requests.append(data)
+
+    r, w = os.pipe()
+
+    mock_socket = MockSocket(r, OSError)
+    with patch(
+        "aiodhcpwatcher.AIODHCPWatcher._make_listen_socket", return_value=mock_socket
+    ), patch("aiodhcpwatcher.AIODHCPWatcher._verify_working_pcap"):
+        stop = await async_start(_handle_dhcp_packet)
+        await _write_test_packets_to_pipe(w)
+    os.close(r)
+    os.close(w)
+    assert requests == []
+    assert "Error while processing dhcp packet" in caplog.text
+
+    r, w = os.pipe()
+    mock_socket = MockSocket(r)
+    with patch(
+        "aiodhcpwatcher.AIODHCPWatcher._make_listen_socket", return_value=mock_socket
+    ), patch("aiodhcpwatcher.AIODHCPWatcher._verify_working_pcap"):
+
+        async_fire_time_changed(utcnow() + timedelta(seconds=AUTO_RECOVER_TIME))
+        await asyncio.sleep(0.1)
+
+        await _write_test_packets_to_pipe(w)
+
+        stop()
+
+    os.close(r)
+    os.close(w)
+    assert requests == [
+        DHCPRequest(
+            ip_address="192.168.107.151", hostname="", mac_address="60:6b:bd:59:e4:b4"
+        ),
+        DHCPRequest(
+            ip_address="192.168.210.56",
+            hostname="connect",
+            mac_address="b8:b7:f1:6d:b5:33",
+        ),
+        DHCPRequest(
+            ip_address="192.168.1.120",
+            hostname="iRobot-AE9EC12DD3B04885BCBFA36AFB01E1CC",
+            mac_address="50:14:79:03:85:2c",
+        ),
+        DHCPRequest(
+            ip_address="192.168.107.151", hostname="", mac_address="60:6b:bd:59:e4:b4"
+        ),
+        DHCPRequest(
+            ip_address="192.168.210.56",
+            hostname="connec�",
+            mac_address="b8:b7:f1:6d:b5:33",
+        ),
+        DHCPRequest(
+            ip_address="192.168.210.56",
+            hostname="ó",
+            mac_address="b8:b7:f1:6d:b5:33",
+        ),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_watcher_stop_after_temp_exception(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test mocking a dhcp packet to the watcher."""
+    requests: list[DHCPRequest] = []
+
+    def _handle_dhcp_packet(data: DHCPRequest) -> None:
+        requests.append(data)
+
+    r, w = os.pipe()
+
+    mock_socket = MockSocket(r, OSError)
+    with patch(
+        "aiodhcpwatcher.AIODHCPWatcher._make_listen_socket", return_value=mock_socket
+    ), patch("aiodhcpwatcher.AIODHCPWatcher._verify_working_pcap"):
+        stop = await async_start(_handle_dhcp_packet)
+        await _write_test_packets_to_pipe(w)
+
+    os.close(r)
+    os.close(w)
+    assert requests == []
+    assert "Error while processing dhcp packet" in caplog.text
+    stop()
+
+    r, w = os.pipe()
+    mock_socket = MockSocket(r)
+    with patch(
+        "aiodhcpwatcher.AIODHCPWatcher._make_listen_socket", return_value=mock_socket
+    ), patch("aiodhcpwatcher.AIODHCPWatcher._verify_working_pcap"):
+
+        async_fire_time_changed(utcnow() + timedelta(seconds=30))
+        await asyncio.sleep(0)
+        await _write_test_packets_to_pipe(w)
+
+        stop()
+
+    os.close(r)
+    os.close(w)
+    assert requests == []
 
 
 @pytest.mark.asyncio

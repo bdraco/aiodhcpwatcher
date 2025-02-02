@@ -3,6 +3,7 @@ __version__ = "1.0.2"
 import asyncio
 import logging
 import os
+import socket
 from dataclasses import dataclass
 from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, Iterable
@@ -17,6 +18,7 @@ _LOGGER = logging.getLogger(__name__)
 
 FILTER = "udp and (port 67 or 68)"
 DHCP_REQUEST = 3
+AUTO_RECOVER_TIME = 30
 
 
 @dataclass(slots=True)
@@ -85,12 +87,46 @@ class AIODHCPWatcher:
     def __init__(self, callback: Callable[[DHCPRequest], None]) -> None:
         """Initialize watcher."""
         self._loop = asyncio.get_running_loop()
-        self._sock: Any | None = None
+        self._sock: socket.socket | None = None
         self._fileno: int | None = None
         self._callback = callback
+        self._shutdown: bool = False
+        self._restart_timer: asyncio.TimerHandle | None = None
+        self._restart_task: asyncio.Task[None] | None = None
+
+    def restart_soon(self) -> None:
+        """Restart the watcher soon."""
+        if not self._restart_timer:
+            _LOGGER.debug("Restarting watcher in %s seconds", AUTO_RECOVER_TIME)
+            self._restart_timer = self._loop.call_later(
+                AUTO_RECOVER_TIME, self._execute_restart
+            )
+
+    def _clear_restart_task(self, task: asyncio.Task[None]) -> None:
+        """Clear the restart task."""
+        self._restart_task = None
+
+    def _execute_restart(self) -> None:
+        """Execute the restart."""
+        self._restart_timer = None
+        if not self._shutdown:
+            _LOGGER.debug("Restarting watcher")
+            self._restart_task = self._loop.create_task(self.async_start())
+            self._restart_task.add_done_callback(self._clear_restart_task)
+
+    def shutdown(self) -> None:
+        """Shutdown the watcher."""
+        self._shutdown = True
+        self.stop()
 
     def stop(self) -> None:
         """Stop watching for DHCP packets."""
+        if self._restart_timer:
+            self._restart_timer.cancel()
+            self._restart_timer = None
+        if self._restart_task:
+            self._restart_task.cancel()
+            self._restart_task = None
         if self._sock and self._fileno:
             self._loop.remove_reader(self._fileno)
             self._sock.close()
@@ -129,11 +165,15 @@ class AIODHCPWatcher:
 
     async def async_start(self) -> None:
         """Start watching for dhcp packets."""
+        if self._shutdown:
+            _LOGGER.debug("Not starting watcher because it is shutdown")
+            return
         if not (
-            _handle_dhcp_packet := await asyncio.get_running_loop().run_in_executor(
-                None, self._start
-            )
+            _handle_dhcp_packet := await self._loop.run_in_executor(None, self._start)
         ):
+            return
+        if self._shutdown:  # may change during the executor call
+            _LOGGER.debug("Not starting watcher because it is shutdown after init")  # type: ignore[unreachable]
             return
         sock = self._sock
         fileno = self._fileno
@@ -149,6 +189,7 @@ class AIODHCPWatcher:
             sock.close()
             self._sock = None
             self._fileno = None
+        _LOGGER.debug("Started watching for dhcp packets")
 
     def _on_data(
         self, handle_dhcp_packet: Callable[["Packet"], None], sock: Any
@@ -158,9 +199,15 @@ class AIODHCPWatcher:
             data = sock.recv()
         except (BlockingIOError, InterruptedError):
             return
+        except OSError as ex:
+            _LOGGER.error("Error while processing dhcp packet: %s", ex)
+            self.stop()
+            self.restart_soon()
+            return
         except BaseException as ex:  # pylint: disable=broad-except
             _LOGGER.exception("Fatal error while processing dhcp packet: %s", ex)
-            self.stop()
+            self.shutdown()
+            return
 
         if data:
             handle_dhcp_packet(data)
@@ -209,7 +256,7 @@ async def async_start(callback: Callable[[DHCPRequest], None]) -> Callable[[], N
     """Listen for DHCP requests."""
     watcher = AIODHCPWatcher(callback)
     await watcher.async_start()
-    return watcher.stop
+    return watcher.shutdown
 
 
 async def async_init() -> None:
