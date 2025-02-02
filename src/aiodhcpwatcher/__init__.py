@@ -102,12 +102,17 @@ class AIODHCPWatcher:
                 AUTO_RECOVER_TIME, self._execute_restart
             )
 
+    def _clear_restart_task(self, task: asyncio.Task[None]) -> None:
+        """Clear the restart task."""
+        self._restart_task = None
+
     def _execute_restart(self) -> None:
         """Execute the restart."""
         self._restart_timer = None
         if not self._shutdown:
             _LOGGER.debug("Restarting watcher")
             self._restart_task = self._loop.create_task(self.async_start())
+            self._restart_task.add_done_callback(self._clear_restart_task)
 
     def shutdown(self) -> None:
         """Shutdown the watcher."""
