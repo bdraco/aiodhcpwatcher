@@ -91,6 +91,7 @@ class AIODHCPWatcher:
         self._callback = callback
         self._shutdown: bool = False
         self._restart_timer: asyncio.TimerHandle | None = None
+        self._restart_task: asyncio.Task[None] | None = None
 
     def restart_soon(self) -> None:
         """Restart the watcher soon."""
@@ -102,9 +103,11 @@ class AIODHCPWatcher:
     def _execute_restart(self) -> None:
         """Execute the restart."""
         self._restart_timer = None
+        if self._restart_task and not self._restart_task.done():
+            raise RuntimeError("Restart task already running")
         if not self._shutdown:
             _LOGGER.debug("Restarting watcher")
-            self._loop.create_task(self.async_start())
+            self._restart_task = self._loop.create_task(self.async_start())
 
     def shutdown(self) -> None:
         """Shutdown the watcher."""
@@ -121,6 +124,9 @@ class AIODHCPWatcher:
         if self._restart_timer:
             self._restart_timer.cancel()
             self._restart_timer = None
+        if self._restart_task:
+            self._restart_task.cancel()
+            self._restart_task = None
 
     def _start(self) -> Callable[["Packet"], None] | None:
         """Start watching for dhcp packets."""
