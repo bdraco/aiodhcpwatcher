@@ -363,6 +363,7 @@ async def test_watcher_temp_exception(caplog: pytest.LogCaptureFixture) -> None:
         async_fire_time_changed(utcnow() + timedelta(seconds=AUTO_RECOVER_TIME))
         await asyncio.sleep(0)
         await asyncio.sleep(0)
+        await asyncio.sleep(0)
 
         for test_packet in (
             RAW_DHCP_REQUEST_WITHOUT_HOSTNAME,
