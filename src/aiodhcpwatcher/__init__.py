@@ -31,7 +31,7 @@ class DHCPRequest:
 
 
 def make_packet_handler(
-    callback: Callable[[DHCPRequest], None]
+    callback: Callable[[DHCPRequest], None],
 ) -> Callable[["Packet"], None]:
     """Create a packet handler."""
     # Local import because importing from scapy has side effects such as opening
