@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.4 (2025-02-04)
+
+### Bug fixes
+
+- Update poetry to v2 + add license to metadata (#60) ([`52c6e80`](https://github.com/bdraco/aiodhcpwatcher/commit/52c6e8002d98b9960705fa0ea246099e3b62eeeb))
+
 ## v1.0.3 (2025-02-02)
 
 ### Bug fixes
