@@ -245,9 +245,13 @@ async def test_watcher():
     r, w = os.pipe()
 
     mock_socket = MockSocket(r)
-    with patch(
-        "aiodhcpwatcher.AIODHCPWatcher._make_listen_socket", return_value=mock_socket
-    ), patch("aiodhcpwatcher.AIODHCPWatcher._verify_working_pcap"):
+    with (
+        patch(
+            "aiodhcpwatcher.AIODHCPWatcher._make_listen_socket",
+            return_value=mock_socket,
+        ),
+        patch("aiodhcpwatcher.AIODHCPWatcher._verify_working_pcap"),
+    ):
         stop = await async_start(_handle_dhcp_packet)
         await _write_test_packets_to_pipe(w)
 
@@ -296,9 +300,13 @@ async def test_watcher_fatal_exception(caplog: pytest.LogCaptureFixture) -> None
     r, w = os.pipe()
 
     mock_socket = MockSocket(r, ValueError)
-    with patch(
-        "aiodhcpwatcher.AIODHCPWatcher._make_listen_socket", return_value=mock_socket
-    ), patch("aiodhcpwatcher.AIODHCPWatcher._verify_working_pcap"):
+    with (
+        patch(
+            "aiodhcpwatcher.AIODHCPWatcher._make_listen_socket",
+            return_value=mock_socket,
+        ),
+        patch("aiodhcpwatcher.AIODHCPWatcher._verify_working_pcap"),
+    ):
         stop = await async_start(_handle_dhcp_packet)
         await _write_test_packets_to_pipe(w)
 
@@ -321,9 +329,13 @@ async def test_watcher_temp_exception(caplog: pytest.LogCaptureFixture) -> None:
     r, w = os.pipe()
 
     mock_socket = MockSocket(r, OSError)
-    with patch(
-        "aiodhcpwatcher.AIODHCPWatcher._make_listen_socket", return_value=mock_socket
-    ), patch("aiodhcpwatcher.AIODHCPWatcher._verify_working_pcap"):
+    with (
+        patch(
+            "aiodhcpwatcher.AIODHCPWatcher._make_listen_socket",
+            return_value=mock_socket,
+        ),
+        patch("aiodhcpwatcher.AIODHCPWatcher._verify_working_pcap"),
+    ):
         stop = await async_start(_handle_dhcp_packet)
         await _write_test_packets_to_pipe(w)
     os.close(r)
@@ -333,9 +345,13 @@ async def test_watcher_temp_exception(caplog: pytest.LogCaptureFixture) -> None:
 
     r, w = os.pipe()
     mock_socket = MockSocket(r)
-    with patch(
-        "aiodhcpwatcher.AIODHCPWatcher._make_listen_socket", return_value=mock_socket
-    ), patch("aiodhcpwatcher.AIODHCPWatcher._verify_working_pcap"):
+    with (
+        patch(
+            "aiodhcpwatcher.AIODHCPWatcher._make_listen_socket",
+            return_value=mock_socket,
+        ),
+        patch("aiodhcpwatcher.AIODHCPWatcher._verify_working_pcap"),
+    ):
 
         async_fire_time_changed(utcnow() + timedelta(seconds=AUTO_RECOVER_TIME))
         await asyncio.sleep(0.1)
@@ -389,9 +405,13 @@ async def test_watcher_stop_after_temp_exception(
     r, w = os.pipe()
 
     mock_socket = MockSocket(r, OSError)
-    with patch(
-        "aiodhcpwatcher.AIODHCPWatcher._make_listen_socket", return_value=mock_socket
-    ), patch("aiodhcpwatcher.AIODHCPWatcher._verify_working_pcap"):
+    with (
+        patch(
+            "aiodhcpwatcher.AIODHCPWatcher._make_listen_socket",
+            return_value=mock_socket,
+        ),
+        patch("aiodhcpwatcher.AIODHCPWatcher._verify_working_pcap"),
+    ):
         stop = await async_start(_handle_dhcp_packet)
         await _write_test_packets_to_pipe(w)
 
@@ -403,9 +423,13 @@ async def test_watcher_stop_after_temp_exception(
 
     r, w = os.pipe()
     mock_socket = MockSocket(r)
-    with patch(
-        "aiodhcpwatcher.AIODHCPWatcher._make_listen_socket", return_value=mock_socket
-    ), patch("aiodhcpwatcher.AIODHCPWatcher._verify_working_pcap"):
+    with (
+        patch(
+            "aiodhcpwatcher.AIODHCPWatcher._make_listen_socket",
+            return_value=mock_socket,
+        ),
+        patch("aiodhcpwatcher.AIODHCPWatcher._verify_working_pcap"),
+    ):
 
         async_fire_time_changed(utcnow() + timedelta(seconds=30))
         await asyncio.sleep(0)
@@ -436,12 +460,14 @@ async def test_setup_fails_broken_filtering(caplog: pytest.LogCaptureFixture) ->
 @pytest.mark.asyncio
 async def test_setup_fails_as_root(caplog: pytest.LogCaptureFixture) -> None:
     """Test that the setup fails as root."""
-    with patch("os.geteuid", return_value=0), patch(
-        "scapy.arch.common.compile_filter"
-    ), patch.object(
-        interfaces,
-        "resolve_iface",
-        side_effect=Scapy_Exception,
+    with (
+        patch("os.geteuid", return_value=0),
+        patch("scapy.arch.common.compile_filter"),
+        patch.object(
+            interfaces,
+            "resolve_iface",
+            side_effect=Scapy_Exception,
+        ),
     ):
         (await async_start(lambda data: None))()
     assert "Cannot watch for dhcp packets" in caplog.text
@@ -451,12 +477,14 @@ async def test_setup_fails_as_root(caplog: pytest.LogCaptureFixture) -> None:
 async def test_setup_fails_as_non_root(caplog: pytest.LogCaptureFixture) -> None:
     """Test that the setup fails as root."""
     caplog.set_level(logging.DEBUG)
-    with patch("os.geteuid", return_value=10), patch(
-        "scapy.arch.common.compile_filter"
-    ), patch.object(
-        interfaces,
-        "resolve_iface",
-        side_effect=Scapy_Exception,
+    with (
+        patch("os.geteuid", return_value=10),
+        patch("scapy.arch.common.compile_filter"),
+        patch.object(
+            interfaces,
+            "resolve_iface",
+            side_effect=Scapy_Exception,
+        ),
     ):
         (await async_start(lambda data: None))()
     assert "Cannot watch for dhcp packets without root or CAP_NET_RAW" in caplog.text
@@ -468,11 +496,13 @@ async def test_permission_denied_to_add_reader(
 ) -> None:
     """Test permission denied to add reader."""
     loop = asyncio.get_running_loop()
-    with patch.object(loop, "add_reader", side_effect=PermissionError), patch(
-        "scapy.arch.common.compile_filter"
-    ), patch.object(
-        interfaces,
-        "resolve_iface",
+    with (
+        patch.object(loop, "add_reader", side_effect=PermissionError),
+        patch("scapy.arch.common.compile_filter"),
+        patch.object(
+            interfaces,
+            "resolve_iface",
+        ),
     ):
         (await async_start(lambda data: None))()
 
