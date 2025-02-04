@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.1.0 (2025-02-04)
+
+### Features
+
+- Change license to apache-2.0 (#61) ([`16f5a1b`](https://github.com/bdraco/aiodhcpwatcher/commit/16f5a1b3bf96526d5f745bcd0aac33ae408e68fc))
+
 ## v1.0.4 (2025-02-04)
 
 ### Bug fixes
