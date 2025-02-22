@@ -1,14 +1,14 @@
 # aiodhcpwatcher
 
 <p align="center">
-  <a href="https://github.com/bdraco/aiodhcpwatcher/actions/workflows/ci.yml?query=branch%3Amain">
-    <img src="https://img.shields.io/github/actions/workflow/status/bdraco/aiodhcpwatcher/ci.yml?branch=main&label=CI&logo=github&style=flat-square" alt="CI Status" >
+  <a href="https://github.com/bluetooth-devices/aiodhcpwatcher/actions/workflows/ci.yml?query=branch%3Amain">
+    <img src="https://img.shields.io/github/actions/workflow/status/bluetooth-devices/aiodhcpwatcher/ci.yml?branch=main&label=CI&logo=github&style=flat-square" alt="CI Status" >
   </a>
   <a href="https://aiodhcpwatcher.readthedocs.io">
     <img src="https://img.shields.io/readthedocs/aiodhcpwatcher.svg?logo=read-the-docs&logoColor=fff&style=flat-square" alt="Documentation Status">
   </a>
-  <a href="https://codecov.io/gh/bdraco/aiodhcpwatcher">
-    <img src="https://img.shields.io/codecov/c/github/bdraco/aiodhcpwatcher.svg?logo=codecov&logoColor=fff&style=flat-square" alt="Test coverage percentage">
+  <a href="https://codecov.io/gh/bluetooth-devices/aiodhcpwatcher">
+    <img src="https://img.shields.io/codecov/c/github/bluetooth-devices/aiodhcpwatcher.svg?logo=codecov&logoColor=fff&style=flat-square" alt="Test coverage percentage">
   </a>
 </p>
 <p align="center">
@@ -34,7 +34,7 @@
 
 **Documentation**: <a href="https://aiodhcpwatcher.readthedocs.io" target="_blank">https://aiodhcpwatcher.readthedocs.io </a>
 
-**Source Code**: <a href="https://github.com/bdraco/aiodhcpwatcher" target="_blank">https://github.com/bdraco/aiodhcpwatcher </a>
+**Source Code**: <a href="https://github.com/bluetooth-devices/aiodhcpwatcher" target="_blank">https://github.com/bluetooth-devices/aiodhcpwatcher </a>
 
 ---
 

@@ -1,6 +1,6 @@
 [project]
 name = "aiodhcpwatcher"
-version = "1.1.0"
+version = "1.1.1"
 license = "Apache-2.0"
 description = "Watch for DHCP packets with asyncio"
 authors = [{ name = "J. Nick Koston", email = "nick@koston.org" }]
@@ -9,10 +9,10 @@ requires-python = ">=3.10"
 dynamic = ["classifiers", "dependencies", "optional-dependencies"]
 
 [project.urls]
-"Repository" = "https://github.com/bdraco/aiodhcpwatcher"
+"Repository" = "https://github.com/bluetooth-devices/aiodhcpwatcher"
 "Documentation" = "https://aiodhcpwatcher.readthedocs.io"
-"Bug Tracker" = "https://github.com/bdraco/aiodhcpwatcher/issues"
-"Changelog" = "https://github.com/bdraco/aiodhcpwatcher/blob/main/CHANGELOG.md"
+"Bug Tracker" = "https://github.com/bluetooth-devices/aiodhcpwatcher/issues"
+"Changelog" = "https://github.com/bluetooth-devices/aiodhcpwatcher/blob/main/CHANGELOG.md"
 
 [tool.poetry]
 classifiers = [
